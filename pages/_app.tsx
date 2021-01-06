@@ -9,7 +9,7 @@ import {
 // import { GitClient, GitMediaStore } from '@tinacms/git-client'
 import { MarkdownFieldPlugin } from 'react-tinacms-editor'
 import { DateFieldPlugin } from 'react-tinacms-date'
-
+import { BrowserStorageApi } from 'utils/plugins/BrowserStorageApi'
 // import { BlogPostCreatorPlugin } from 'plugins/BlogPostCreator'
 
 export default class Site extends App {
@@ -35,12 +35,16 @@ export default class Site extends App {
       },
       apis: {
         github,
+        storage:
+        typeof window !== 'undefined'
+          ? new BrowserStorageApi(window.localStorage)
+          : {},
       },
       media: new GithubMediaStore(github),
       /**
        * 4. Use the Sidebar and Toolbar
        */
-      sidebar: props.pageProps.preview,
+      // sidebar: props.pageProps.preview,
       toolbar: props.pageProps.preview,
     })
 

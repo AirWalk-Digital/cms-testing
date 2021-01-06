@@ -1,52 +1,31 @@
 import * as React from 'react'
 import matter from 'gray-matter'
 import ReactMarkdown from 'react-markdown'
-import { usePlugin } from 'tinacms'
+import { formatDate } from 'utils'
+import Error from 'next/error'
+import { usePlugin, useCMS } from 'tinacms'
 import { useGithubMarkdownForm } from 'react-tinacms-github'
-import Layout from '../../components/Layout'
+import Layout from 'components/layout/Layout'
+import { MarkdownContent } from 'components/layout/MarkdownContent'
 
-export default function BlogTemplate(props) {
-  const formOptions = {
-    label: 'Blog Page',
-    fields: [
-      {
-        label: 'Hero Image',
-        name: 'frontmatter.hero_image',
-        component: 'image',
-        // Generate the frontmatter value based on the filename
-        parse: media => `/static/${media.filename}`,
-
-        // Decide the file upload directory for the post
-        uploadDir: () => '/public/static/',
-
-        // Generate the src attribute for the preview image.
-        previewSrc: fullSrc => fullSrc.replace('/public', ''),
-      },
-      {
-        name: 'frontmatter.title',
-        label: 'Title',
-        component: 'text',
-      },
-      {
-        name: 'frontmatter.date',
-        label: 'Date',
-        component: 'date',
-      },
-      {
-        name: 'frontmatter.author',
-        label: 'Author',
-        component: 'text',
-      },
-      {
-        name: 'markdownBody',
-        label: 'Blog Body',
-        component: 'markdown',
-      },
-    ],
+import { getMarkdownPreviewProps } from 'utils/getMarkdownPreviewProps'
+const fg = require('fast-glob')
+import { fileToUrl } from 'utils/urls'
+import { InlineWysiwyg } from 'components/layout/inline-wysiwyg'
+import { InlineGithubForm } from 'components/layout/InlineGithubForm'
+export default function BlogTemplate({file}) {
+  // fallback workaround
+  if (!file) {
+    return <Error statusCode={404} />
   }
-
-  const [post, form] = useGithubMarkdownForm(props.markdownFile, formOptions)
+  
+  const [data, form] = useGithubMarkdownForm(file, formOptions)
   usePlugin(form)
+  
+  const frontmatter = data.frontmatter
+  const markdownBody = data.markdownBody
+  const excerpt = data.excerpt
+   
 
   function reformatDate(fullDate) {
     const date = new Date(fullDate)
@@ -54,22 +33,33 @@ export default function BlogTemplate(props) {
   }
 
   return (
-    <Layout siteTitle={props.title}>
+    <InlineGithubForm form={form}>
+    <Layout siteTitle='temp'>
+
       <article className="blog">
         <figure className="blog__hero">
           <img
-            src={post.frontmatter.hero_image}
-            alt={`blog_hero_${post.frontmatter.title}`}
+            src={frontmatter.hero_image}
+            alt={`blog_hero_${frontmatter.title}`}
           />
         </figure>
         <div className="blog__info">
-          <h1>{post.frontmatter.title}</h1>
-          <h3>{reformatDate(post.frontmatter.date)}</h3>
+          <h1>{frontmatter.title}</h1>
+          <h3>{reformatDate(frontmatter.date)}</h3>
         </div>
         <div className="blog__body">
-          <ReactMarkdown source={post.markdownBody} />
+          {/* <ReactMarkdown source={markdownBody} /> */}
+          <InlineWysiwyg
+              name="markdownBody"
+              imageProps={{
+                uploadDir: () => '/img/blog',
+                parse: media => `/img/blog/${media.filename}`,
+              }}
+            >
+              <MarkdownContent escapeHtml={false} content={markdownBody} />
+            </InlineWysiwyg>
         </div>
-        <h2 className="blog__footer">Written By: {post.frontmatter.author}</h2>
+        <h2 className="blog__footer">Written By: {frontmatter.author}</h2>
       </article>
       <style jsx>
         {`
@@ -203,21 +193,123 @@ export default function BlogTemplate(props) {
         `}
       </style>
     </Layout>
+    </InlineGithubForm>
   )
 }
 
-BlogTemplate.getInitialProps = async function(ctx) {
-  const { slug } = ctx.query
-  const content = await import(`../../posts/${slug}.md`)
-  const config = await import(`../../data/config.json`)
-  const data = matter(content.default)
+
+const formOptions = {
+  label: 'Blog Page',
+  fields: [
+    {
+      label: 'Hero Image',
+      name: 'frontmatter.hero_image',
+      component: 'image',
+      // Generate the frontmatter value based on the filename
+      parse: media => `/static/${media.filename}`,
+
+      // Decide the file upload directory for the post
+      uploadDir: () => '/public/static/',
+
+      // Generate the src attribute for the preview image.
+      previewSrc: fullSrc => fullSrc.replace('/public', ''),
+    },
+    {
+      name: 'frontmatter.title',
+      label: 'Title',
+      component: 'text',
+    },
+    {
+      name: 'frontmatter.date',
+      label: 'Date',
+      component: 'date',
+    },
+    {
+      name: 'frontmatter.author',
+      label: 'Author',
+      component: 'text',
+    },
+    {
+      name: 'markdownBody',
+      label: 'Blog Body',
+      component: 'markdown',
+    },
+  ],
+}
+
+// BlogTemplate.getInitialProps = async function(ctx) {
+//   const { slug } = ctx.query
+//   const content = await import(`../../posts/${slug}.md`)
+//   const config = await import(`../../data/config.json`)
+//   const data = matter(content.default)
+
+//   return {
+//     markdownFile: {
+//       fileRelativePath: `posts/${slug}.md`,
+//       frontmatter: data.data,
+//       markdownBody: data.content,
+//     },
+//     title: config.default.title,
+//   }
+// }
+
+export const getStaticProps: GetStaticProps = async function({
+  preview,
+  previewData,
+  ...ctx
+}) {
+  const { slug } = ctx.params
+
+  //TODO - move to readFile
+  // const { default: siteConfig } = await import('../../content/siteConfig.json')
+
+  const currentBlog = await getMarkdownPreviewProps(
+    `posts/${slug}.md`,
+    preview,
+    previewData
+  )
+
+  if ((currentBlog.props.error?.status || '') === 'ENOENT') {
+    return { props: {} } // will render the 404 error
+  }
 
   return {
-    markdownFile: {
-      fileRelativePath: `posts/${slug}.md`,
-      frontmatter: data.data,
-      markdownBody: data.content,
+    props: {
+      ...currentBlog.props,
+      siteConfig: { title: "site title" },
     },
-    title: config.default.title,
   }
 }
+
+// export const getStaticPaths: GetStaticPaths = async function() {
+//   const blogs = await fg(`./posts/*.md`)
+//   // console.log(blogs)
+//   // console.log(blogs.map(file => {
+//   //   // console.log(file)
+//   //   const slug = fileToUrl(file, 'posts')
+//   //   // const slug = file.split('/')
+//   //   return { params: { slug } }
+//   // }))
+
+//   return {
+//     paths: blogs.map(file => {
+//       // console.log(file)
+//       const slug = fileToUrl(file, 'posts')
+//       // const slug = file.split('/')
+//       return { params: { slug } }
+//         }),
+//     fallback: true,
+//   }
+// }
+
+export const getStaticPaths: GetStaticPaths = async function() {
+  const blogs = await fg(`./posts/**/*.md`)
+  return {
+    paths: blogs.map(file => {
+      const slug = fileToUrl(file)
+      return { params: { slug } }
+    }),
+    fallback: true,
+  }
+}
+
