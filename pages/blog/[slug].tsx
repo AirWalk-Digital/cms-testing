@@ -2,8 +2,7 @@ import * as React from 'react'
 import matter from 'gray-matter'
 import ReactMarkdown from 'react-markdown'
 import { usePlugin } from 'tinacms'
-import { useMarkdownForm } from 'next-tinacms-markdown'
-
+import { useGithubMarkdownForm } from 'react-tinacms-github'
 import Layout from '../../components/Layout'
 
 export default function BlogTemplate(props) {
@@ -46,7 +45,7 @@ export default function BlogTemplate(props) {
     ],
   }
 
-  const [post, form] = useMarkdownForm(props.markdownFile, formOptions)
+  const [post, form] = useGithubMarkdownForm(props.markdownFile, formOptions)
   usePlugin(form)
 
   function reformatDate(fullDate) {

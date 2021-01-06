@@ -1,11 +1,22 @@
 const glob = require('glob')
+require('dotenv').config()
+
 
 module.exports = {
+  env: {
+    GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID,
+    BASE_REPO_FULL_NAME: process.env.REPO_FULL_NAME,
+    BASE_BRANCH: process.env.BASE_BRANCH,
+  },
+  trailingSlash: true,
   webpack: function(config) {
     config.module.rules.push({
       test: /\.md$/,
       use: 'raw-loader',
     })
+    config.node = {
+      fs: 'empty',
+    }
     return config
   },
   exportPathMap: async function() {

@@ -1,6 +1,10 @@
 import matter from 'gray-matter'
-import { useJsonForm } from 'next-tinacms-json'
+// import { useJsonForm } from 'next-tinacms-json'
+
+import { getGithubPreviewProps, parseJson } from 'next-tinacms-github'
+import { GetStaticProps } from 'next'
 import { usePlugin } from 'tinacms'
+import { useGithubJsonForm, useGithubToolbarPlugins} from 'react-tinacms-github'
 
 import Layout from '../components/Layout'
 import BlogList from '../components/BlogList'
@@ -26,9 +30,9 @@ const Index = ({ jsonFile, allBlogs }) => {
       },
     ],
   }
-  const [data, form] = useJsonForm(jsonFile, formOptions)
+  const [data, form] = useGithubJsonForm(jsonFile, formOptions)
   usePlugin(form)
-
+  useGithubToolbarPlugins()
   return (
     <Layout
       pathname="/"
@@ -75,5 +79,31 @@ Index.getInitialProps = async function() {
     },
 
     allBlogs: posts,
+  }
+}
+
+
+
+export const getStaticProps: GetStaticProps = async function ({
+  preview,
+  previewData,
+}) {
+  if (preview) {
+    return getGithubPreviewProps({
+      ...previewData,
+      fileRelativePath: 'content/home.json',
+      parse: parseJson,
+    })
+  }
+  return {
+    props: {
+      sourceProvider: null,
+      error: null,
+      preview: false,
+      file: {
+        fileRelativePath: 'content/home.json',
+        data: (await import('../content/home.json')).default,
+      },
+    },
   }
 }
