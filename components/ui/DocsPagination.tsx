@@ -1,6 +1,6 @@
 import React from 'react'
 import styled, { css } from 'styled-components'
-import RightArrowSvg from '../../public/svg/right-arrow.svg'
+import RightArrowSvg from './../../public/svg/right-arrow.svg'
 import { DynamicLink } from '../ui/DynamicLink'
 interface NextPrevPageProps {
   title: string

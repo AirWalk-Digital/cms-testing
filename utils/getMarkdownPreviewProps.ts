@@ -28,7 +28,7 @@ export const getMarkdownPreviewProps = async (
   let file = null
   let error = null
   let tocItems = null
-
+  console.log("file path: " + fileRelativePath)
   try {
     file = await getMarkdownFile(fileRelativePath, preview, previewData)
     file.data.excerpt = await formatExcerpt(file.data.markdownBody)

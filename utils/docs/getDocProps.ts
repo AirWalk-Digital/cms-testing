@@ -10,34 +10,41 @@ export async function getDocsNav(preview: boolean, previewData: any) {
 }
 
 export async function getDocProps({ preview, previewData }: any, slug: string) {
+  console.log("getDocProps slug: " + slug)
+
   const currentDoc = (
     await getMarkdownPreviewProps(
-      `content/docs/${slug}.md`,
+      `posts/${slug}.md`,
       preview,
       previewData
     )
   ).props
+  console.log("getDocProps currentDoc: " + currentDoc)
 
-  const docsNav = await getDocsNav(preview, previewData)
+  // const docsNav = await getDocsNav(preview, previewData)
 
-  if (!currentDoc || currentDoc.error || !docsNav) {
+  // if (!currentDoc || currentDoc.error || !docsNav) {
+  //   throw new NotFoundError('Document not found')
+  // }
+
+  if (!currentDoc || currentDoc.error ) {
     throw new NotFoundError('Document not found')
   }
 
   return {
     props: {
       ...currentDoc,
-      docsNav: docsNav.data,
-      nextPage: await getPageRef(
-        currentDoc.file.data.frontmatter.next,
-        preview,
-        previewData
-      ),
-      prevPage: await getPageRef(
-        currentDoc.file.data.frontmatter.prev,
-        preview,
-        previewData
-      ),
+      // docsNav: docsNav.data,
+      // nextPage: await getPageRef(
+      //   currentDoc.file.data.frontmatter.next,
+      //   preview,
+      //   previewData
+      // ),
+      // prevPage: await getPageRef(
+      //   currentDoc.file.data.frontmatter.prev,
+      //   preview,
+      //   previewData
+      // ),
     },
   }
 }

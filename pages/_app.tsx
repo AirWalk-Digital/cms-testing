@@ -30,9 +30,9 @@ export default class Site extends App {
     this.cms = new TinaCMS({
       // enabled: process.env.NODE_ENV === 'development',
       enabled: !!props.pageProps.preview,
-      sidebar: {
-        position: 'overlay',
-      },
+      // sidebar: {
+      //   position: 'overlay',
+      // },
       apis: {
         github,
         storage:
@@ -44,7 +44,7 @@ export default class Site extends App {
       /**
        * 4. Use the Sidebar and Toolbar
        */
-      // sidebar: props.pageProps.preview,
+      sidebar: props.pageProps.preview,
       toolbar: props.pageProps.preview,
     })
 
@@ -62,7 +62,7 @@ export default class Site extends App {
           onLogout={onLogout}
           error={pageProps.error}
         >
-          <EditLink cms={this.cms} />
+          {/* <EditLink cms={this.cms} /> */}
           <Component {...pageProps} />
         </TinacmsGithubProvider>
       </TinaProvider>
@@ -95,10 +95,10 @@ export interface EditLinkProps {
   cms: TinaCMS
 }
 
-export const EditLink = ({ cms }: EditLinkProps) => {
-  return (
-    <button onClick={() => cms.toggle()}>
-      {cms.enabled ? 'Exit Edit Mode' : 'Edit This Site'}
-    </button>
-  )
-}
+// export const EditLink = ({ cms }: EditLinkProps) => {
+//   return (
+//     <button onClick={() => cms.toggle()}>
+//       {cms.enabled ? 'Exit Edit Mode' : 'Edit This Site'}
+//     </button>
+//   )
+// }

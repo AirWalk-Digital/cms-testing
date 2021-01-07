@@ -1,27 +1,40 @@
+import styled from 'styled-components'
+import { useRouter } from 'next/router'
+
 import * as React from 'react'
 import matter from 'gray-matter'
 import ReactMarkdown from 'react-markdown'
 import { formatDate } from 'utils'
+import { Button } from 'components/ui/Button'
 import Error from 'next/error'
 import { usePlugin, useCMS } from 'tinacms'
 import { useGithubMarkdownForm } from 'react-tinacms-github'
 import Layout from 'components/layout/Layout'
 import { MarkdownContent } from 'components/layout/MarkdownContent'
-
+import { CloseIcon, EditIcon } from '@tinacms/icons'
 import { getMarkdownPreviewProps } from 'utils/getMarkdownPreviewProps'
-const fg = require('fast-glob')
+const fg = require('glob')
 import { fileToUrl } from 'utils/urls'
 import { InlineWysiwyg } from 'components/layout/inline-wysiwyg'
 import { InlineGithubForm } from 'components/layout/InlineGithubForm'
-export default function BlogTemplate({file}) {
+import { getDocProps } from 'utils/docs/getDocProps'
+import { GithubError } from 'next-tinacms-github'
+import { NotFoundError } from 'utils/error/NotFoundError'
+
+export default function BlogTemplate(props) {
   // fallback workaround
-  if (!file) {
-    return <Error statusCode={404} />
-  }
+  // if (!file) {
+  //   return <Error statusCode={404} />
+  // }
+  // const router = useRouter()
+  // if (!file?.slug) {
+  //   return <Error statusCode={404} />
+  // }
   
-  const [data, form] = useGithubMarkdownForm(file, formOptions)
+  const [data, form] = useGithubMarkdownForm(props.file, formOptions)
   usePlugin(form)
-  
+  // useLastEdited(form)
+
   const frontmatter = data.frontmatter
   const markdownBody = data.markdownBody
   const excerpt = data.excerpt
@@ -37,6 +50,7 @@ export default function BlogTemplate({file}) {
     <Layout siteTitle='temp'>
 
       <article className="blog">
+        <EditLink/>
         <figure className="blog__hero">
           <img
             src={frontmatter.hero_image}
@@ -237,49 +251,97 @@ const formOptions = {
   ],
 }
 
-// BlogTemplate.getInitialProps = async function(ctx) {
-//   const { slug } = ctx.query
-//   const content = await import(`../../posts/${slug}.md`)
-//   const config = await import(`../../data/config.json`)
-//   const data = matter(content.default)
+export const getStaticProps: GetStaticProps = async function(props) {
+  let { slug: slugs } = props.params
 
+  // @ts-ignore This should maybe always be a string[]?
+  const slug = slugs.join('/')
+  console.log(slug)
+
+  try {
+    return await getDocProps(props, slug)
+  } catch (e) {
+    if (e instanceof GithubError) {
+      console.log("getDocProps: GithubError")
+      return {
+        props: {
+          error: { ...e }, //workaround since we cant return error as JSON
+        },
+      }
+    } else if (e instanceof NotFoundError) {
+      console.log("getDocProps: NotFoundError")
+      return {
+        props: {
+          notFound: true,
+        },
+      }
+    }
+  }
+}
+
+export const getStaticPaths: GetStaticPaths = async function() {
+  const fg = require('fast-glob')
+  const contentDir = './posts/'
+  const files = await fg(`${contentDir}**/*.md`)
+  // console.log(files)
+  return {
+    fallback: 'blocking',
+    paths: files
+      // .filter(file => !file.endsWith('index.md'))
+      .map(file => {
+        const path = file.substring(contentDir.length, file.length - 3)
+        return { params: { slug: path.split('/') } }
+      }),
+  }
+}
+
+
+// export async function getStaticProps({ ctx }) {
+// // BlogTemplate.getInitialProps = async function(ctx) {
+//   const { slug } = ctx.params
+//   console.log(slug)
+
+//   const content = await import(`../../posts/${slug}.md`)
+//   // const config = await import(`../../data/config.json`)
+//   const data = matter(content.default)
 //   return {
 //     markdownFile: {
 //       fileRelativePath: `posts/${slug}.md`,
 //       frontmatter: data.data,
 //       markdownBody: data.content,
 //     },
-//     title: config.default.title,
+//     title: '',
 //   }
 // }
 
-export const getStaticProps: GetStaticProps = async function({
-  preview,
-  previewData,
-  ...ctx
-}) {
-  const { slug } = ctx.params
 
-  //TODO - move to readFile
-  // const { default: siteConfig } = await import('../../content/siteConfig.json')
+// export async function getStaticProps({ preview,
+//   previewData,
+//   ...ctx }) {
 
-  const currentBlog = await getMarkdownPreviewProps(
-    `posts/${slug}.md`,
-    preview,
-    previewData
-  )
+//   const { slug } = ctx.params
 
-  if ((currentBlog.props.error?.status || '') === 'ENOENT') {
-    return { props: {} } // will render the 404 error
-  }
+//   //TODO - move to readFile
+//   // const { default: siteConfig } = await import('../../content/siteConfig.json')
+//   const currentBlog = await getMarkdownPreviewProps(
+//     `posts/${slug}.md`,
+//     preview,
+//     previewData
+//   )
+//   console.log("slug: " + slug)
+//   console.log(currentBlog)
 
-  return {
-    props: {
-      ...currentBlog.props,
-      siteConfig: { title: "site title" },
-    },
-  }
-}
+//   if ((currentBlog.props.error?.status || '') === 'ENOENT') {
+//     return { props: {} } // will render the 404 error
+//   }
+
+//   return {
+//     props: {
+//       ...currentBlog.props,
+//       siteConfig: { title: "site title" },
+//     },
+//   }
+// }
 
 // export const getStaticPaths: GetStaticPaths = async function() {
 //   const blogs = await fg(`./posts/*.md`)
@@ -302,14 +364,44 @@ export const getStaticProps: GetStaticProps = async function({
 //   }
 // }
 
-export const getStaticPaths: GetStaticPaths = async function() {
-  const blogs = await fg(`./posts/**/*.md`)
-  return {
-    paths: blogs.map(file => {
-      const slug = fileToUrl(file)
-      return { params: { slug } }
-    }),
-    fallback: true,
-  }
+// export const getStaticPaths: GetStaticPaths = async function() {
+//   const blogs = await fg(`./posts/**/*.md`)
+//   return {
+//     paths: blogs.map(file => {
+//       const slug = fileToUrl(file)
+//       return { params: { slug } }
+//     }),
+//     fallback: false,
+//   }
+// }
+
+/*
+ ** Edit Button ------------------------------------------------------
+ */
+
+const EditLink = () => {
+  const cms = useCMS()
+
+  return (
+    <EditButton id="OpenAuthoringBlogEditButton" onClick={cms.toggle}>
+      {cms.enabled ? <CloseIcon /> : <EditIcon />}
+      {cms.enabled ? 'Exit Edit Mode' : 'Edit This Post'}
+    </EditButton>
+  )
 }
 
+const EditButton = styled(Button)`
+  background: none;
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--color-primary);
+  padding: 0 1.25rem;
+  height: 45px;
+  color: var(--color-primary);
+  transition: all 150ms ease-out;
+  transform: translate3d(0px, 0px, 0px);
+  svg {
+    fill: currentColor;
+    margin: 0 4px 0 -4px;
+  }
+`
